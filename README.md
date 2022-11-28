@@ -1,4 +1,5 @@
 # connect-deploy-nuxt
+CircleCIでbuild & AWS S3へdeployする処理をテスト
 
 ## Build Setup
 
