@@ -1,37 +1,55 @@
-version: 2
+version: 2.1
+orbs:
+  aws-s3: circleci/aws-s3@1.0.15
 
 jobs:
-  ci:
+  build:
     docker:
-      - image: cimg/node:lts
+      - image: circleci/node:16
     steps:
       - checkout
-
       - restore_cache:
+          name: Restore Yarn Package Cache
           keys:
-            - node-v1-{{ checksum "package-lock.json" }}
-
+            - yarn-packages-{{ checksum "yarn.lock" }}
       - run:
-          name: Install dependencies
-          command: npm ci
-
+          name: Setup Step
+          command: yarn install
       - save_cache:
-          key: node-v1-{{ checksum "package-lock.json" }}
+          name: Save Yarn Package Cache
+          key: yarn-packages-{{ checksum "yarn.lock" }}
           paths:
-            - ~/.npm
-
+            - ~/.cache/yarn
       - run:
-          name: Run linter
-          command: npm run lint
-
+          name: Build Step
+          command: NODE_ENV=production yarn generate
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+            - dist
+  deploy:
+    docker:
+      - image: circleci/python:3.6-jessie
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - aws-s3/sync:
+          from: dist
+          to: 's3://nuxt-sandbox'
+          overwrite: true
+      - run: aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths '/*'
 
 workflows:
   version: 2
-  ci:
+  build-deploy:
     jobs:
-      - ci:
+      - build:
           filters:
             branches:
-              only:
-                - main
-                - master
+              only: main
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: main
