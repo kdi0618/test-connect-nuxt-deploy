@@ -35,7 +35,7 @@ jobs:
           at: ~/project
       - aws-s3/sync:
           from: dist
-          to: 's3://nuxt-sandbox'
+          to: 's3://testconnectnuxtdeploy'
           overwrite: true
       - run: aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths '/*'
 
